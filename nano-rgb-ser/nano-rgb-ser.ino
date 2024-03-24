@@ -8,21 +8,19 @@
 
   note:
   * led pins: D2, D3, D4
-  * serial interface: Tx/D1, Rx/D0
+  * serial interfaces: USB & Tx/D6 / Rx/D7
 
   notes on Nano clone programming:
   * install CH340 driver?
   * select old bootloader?
 
-  todo:
-  * use SoftSerial?
-  
+
 */
 
 #include <SoftwareSerial.h>
 
-#define txPin 7
-#define rxPin 8
+#define txPin 6
+#define rxPin 7
 
 #define ON HIGH
 #define OFF LOW
@@ -40,7 +38,7 @@ char command[16];  // command line
 byte cptr = 0;
 
 bool echo = false;
-bool debug = false;
+bool debug = false;   // note: debug messages only via USB
 
 
 SoftwareSerial mySerial = SoftwareSerial(rxPin, txPin);  // add. serial i/f
@@ -172,7 +170,7 @@ void setup() {
 void loop() {
 
   // read from usb interface
-  while (Serial.available()) {  // read from interface
+  if (Serial.available()) {  // read from interface
 
     char c = Serial.read();
     if (echo)
@@ -192,9 +190,10 @@ void loop() {
   }
 
   // read from additional serial interface
-  while (mySerial.available()) {  // read from interface
+  if (mySerial.available()) {  // read from interface
 
     char c = mySerial.read();
+
     if (echo)
       mySerial.print(c);
 
@@ -260,7 +259,7 @@ void processCommand() {
     Serial.println("analog: out <num> (0...1023), in, loop (stop with 'q')");
 
     mySerial.println("nano-rgb-ser - RGB LED with serial interface");
-    mySerial.print("version 20240323   ");
+    mySerial.print("version 2024032   ");
     mySerial.print("   echo: ");
     mySerial.print(echo);
     mySerial.print("   debug: ");
@@ -316,6 +315,6 @@ void processCommand() {
     mySerial.println("err");
   } else {
     Serial.println("ok");
-    mySerial.println("err");
+    mySerial.println("ok");
   }
 }
