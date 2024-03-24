@@ -1,23 +1,27 @@
 /*
-  nano-rgb-ser - RGB LED with serial interface
+  nano-4digit-ser - 4 digits with serial interface
 
-  20240323, Jens
+  20240324, Jens
 
-  control a RGB led via ASCII commands
-  additional analog output and input
+  control small number display via ASCII commands
 
   notes:
-  * led pins: D2, D3, D4
-  * analog pins Ain - A0/D14 & Aout D9
+  * TM1637 pins: CLK - D2 & DIO - D3
   * serial interfaces: USB & Tx/D6 / Rx/D7
 
   notes on Nano clone programming:
   * install CH340 driver?
   * select old bootloader?
 
+  todo:
+  * display analog value, esp. loop
+  * set brightness?
+  * set bounds or display ranges
+
 */
 
 #include <SoftwareSerial.h>
+#include <TM1637Display.h>
 
 #define txPin 6
 #define rxPin 7
@@ -25,9 +29,8 @@
 #define ON HIGH
 #define OFF LOW
 
-#define LED_R 2
-#define LED_G 3
-#define LED_B 4
+#define CLK 2
+#define DIO 3
 
 #define A_IN A0
 #define A_OUT 9
@@ -37,31 +40,46 @@ unsigned long previousMillis;  // variable for comparing millis counter
 char command[16];  // command line
 byte cptr = 0;
 
-bool echo = false;
-bool debug = false;   // note: debug messages only via USB
 
+bool echo = false;
+// bool debug = false;  // note: debug messages only via USB
+bool debug = true;
 
 SoftwareSerial mySerial = SoftwareSerial(rxPin, txPin);  // add. serial i/f
 
+TM1637Display display(CLK, DIO);
+
+const uint8_t full[] = { 0xff, 0xff, 0xff, 0xff };
+const uint8_t blank[] = { 0x00, 0x00, 0x00, 0x00 };
+const uint8_t upper[] = { 0x01, 0x01, 0x01, 0x01 };
+const uint8_t lower[] = { 0x08, 0x08, 0x08, 0x08 };
 
 void (*resetFunc)(void) = 0;  //declare reset function @ address 0
 
 
 void test(int dtime) {
 
-  // show each LED
+  uint8_t data[4];
 
-  digitalWrite(LED_R, ON);
-  delay(dtime);
-  digitalWrite(LED_R, OFF);
+  for (int n = 0; n < 3; n++) {
+    byte s = 1;
+    for (int m = 0; m < 8; m++) {
+      data[0] = s;
+      data[1] = s;
+      data[2] = s;
+      data[3] = s;
+      display.setSegments(data);
+      delay(50);
+      s = s << 1;
+    }
+  }
+  display.setSegments(blank);
 
-  digitalWrite(LED_G, ON);
-  delay(dtime);
-  digitalWrite(LED_G, OFF);
-
-  digitalWrite(LED_B, ON);
-  delay(dtime);
-  digitalWrite(LED_B, OFF);
+  // display.setSegments(blank);
+  // delay(dtime);
+  // display.setSegments(data);
+  // delay(dtime);
+  // display.setSegments(blank);
 }
 
 
@@ -142,14 +160,6 @@ void setup() {
   digitalWrite(LED_BUILTIN, LOW);
   previousMillis = millis();
 
-  pinMode(LED_R, OUTPUT);
-  pinMode(LED_G, OUTPUT);  // Nano pins
-  pinMode(LED_B, OUTPUT);
-
-  digitalWrite(LED_R, OFF);
-  digitalWrite(LED_G, OFF);  // default: OFF
-  digitalWrite(LED_B, OFF);
-
   analogWrite(A_OUT, 0);  // default: 0 V
 
   pinMode(rxPin, INPUT);  // pins serial interface
@@ -158,11 +168,15 @@ void setup() {
 
   Serial.begin(9600);
 
+  pinMode(CLK, OUTPUT);
+  pinMode(DIO, OUTPUT);
+  display.setBrightness(5);   // 0...7
+
   test(250);
 
-  Serial.println("\nnano-rgb-ser - RGB LED with serial interface");
+  Serial.println("\nnano-4digit-ser - 4 digits with serial interface");
   Serial.println("ok");
-  mySerial.println("\nnano-rgb-ser - RGB LED with serial interface");
+  mySerial.println("\nnano-4digit-ser - 4 digits with serial interface");
   mySerial.println("ok");
 }
 
@@ -248,67 +262,66 @@ void processCommand() {
     debug = !debug;
   } else if ((strcmp(command, "info") == 0) || (command[0] == '?')) {
 
-    Serial.println("nano-rgb-ser - RGB LED with serial interface");
-    Serial.print("version 20240323   ");
+    Serial.println("nano-4digit-ser - 4 digits with serial interface");
+    Serial.print("version 20240324   ");
     Serial.print("   echo: ");
     Serial.print(echo);
     Serial.print("   debug: ");
     Serial.println(debug);
     Serial.println("commands: test, echo, debug, info, reset");
-    Serial.println("colors: red, green, blue, yellow, magenta, cyan, white, black");
     Serial.println("analog: out <num> (0...1023), in, loop (stop with 'q')");
 
-    mySerial.println("nano-rgb-ser - RGB LED with serial interface");
-    mySerial.print("version 2024032   ");
+    mySerial.println("nano-4digit-ser - 4 digits with serial interface");
+    mySerial.print("version 2024034   ");
     mySerial.print("   echo: ");
     mySerial.print(echo);
     mySerial.print("   debug: ");
     mySerial.println(debug);
     mySerial.println("commands: test, echo, debug, info, reset");
-    mySerial.println("colors: red, green, blue, yellow, magenta, cyan, white, black");
     mySerial.println("analog: out <num> (0...1023), in, loop (stop with 'q')");
 
-  } else if (strcmp(command, "reset") == 0) {
-    resetFunc();  //call reset
-  } else if (strcmp(command, "red") == 0) {
-    digitalWrite(LED_R, ON);
-    digitalWrite(LED_G, OFF);
-    digitalWrite(LED_B, OFF);
-  } else if (strcmp(command, "green") == 0) {
-    digitalWrite(LED_R, OFF);
-    digitalWrite(LED_G, ON);
-    digitalWrite(LED_B, OFF);
-  } else if (strcmp(command, "blue") == 0) {
-    digitalWrite(LED_R, OFF);
-    digitalWrite(LED_G, OFF);
-    digitalWrite(LED_B, ON);
-  } else if (strcmp(command, "yellow") == 0) {
-    digitalWrite(LED_R, ON);
-    digitalWrite(LED_G, ON);
-    digitalWrite(LED_B, OFF);
-  } else if (strcmp(command, "magenta") == 0) {
-    digitalWrite(LED_R, ON);
-    digitalWrite(LED_G, OFF);
-    digitalWrite(LED_B, ON);
-  } else if (strcmp(command, "cyan") == 0) {
-    digitalWrite(LED_R, OFF);
-    digitalWrite(LED_G, ON);
-    digitalWrite(LED_B, ON);
-  } else if (strcmp(command, "white") == 0) {
-    digitalWrite(LED_R, ON);
-    digitalWrite(LED_G, ON);
-    digitalWrite(LED_B, ON);
-  } else if (strcmp(command, "black") == 0) {
-    digitalWrite(LED_R, OFF);
-    digitalWrite(LED_G, OFF);
-    digitalWrite(LED_B, OFF);
   } else if (strncmp(command, "out ", 4) == 0) {
     analogOut();
   } else if (strcmp(command, "in") == 0) {
     analogIn();
   } else if (strcmp(command, "loop") == 0) {
     analogLoop();
-  } else err = true;
+  } else {
+
+    int value = 0;
+    bool neg = false;
+
+    if (command[0] == '-') {
+      neg = true;
+      command[0] = '0';
+    }
+
+    String number = command;
+
+    if (debug) {
+      Serial.print("value: '");
+      Serial.print(number);
+    }
+
+    value = number.toInt();
+
+    if (debug) {
+      Serial.print("' - ");
+      Serial.println(value);
+    }
+
+    if (neg)
+      value = value * -1;
+
+    // if (value < 0) {
+    //   display.setSegments(lower);
+    //   err = true;
+    // } else if (value > 9999) {
+    //   display.setSegments(upper);
+    //   err = true;
+    // } else
+    display.showNumberDec(value, false);
+  }
 
   if (err) {
     Serial.println("err");
