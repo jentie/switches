@@ -1,19 +1,20 @@
 /*
   node-tel-ser - telnet serial bridge
 
-  20240324, Jens
+  20240326, Jens
   
   board: NodeMCU 0.9 
 
   notes:
   * log info via USB serial interface @ 115200 
   * serial interface on TXD2 / D8 & RXD2 / D7
-  * select internal loopback with D5 ( high = loopback)
+  * select internal loopback with D5 ( D5=hi --> loopback)
   * select baud rate with D2 & D1
       D2=hi & D1=hi --> 119200
       D2=hi & D1=lo -->  57600
       D2=lo & D1=ho -->  19200
       D2=lo & D1=lo -->   9600
+
 
   based on 8266 example:
   WiFiTelnetToSerial - Example Transparent UART to Telnet Server for esp8266
@@ -44,9 +45,11 @@
 #include <algorithm>  // std::min
 
 #include "credentials.h"
+// const char* ssid = "...";
+// const char* password = "...";
 
-const char hostname[] = "SerBridge";
 
+const char* hostname = "SerBridge";
 
 #define BAUD_SERIAL 115200
 #define BAUD_LOGGER 115200
@@ -111,8 +114,7 @@ void setup() {
 
   WiFi.mode(WIFI_STA);
 
-  WiFi.hostname(hostname);
-  logger->printf("hostname: %s\n", WiFi.hostname().c_str());
+  WiFi.hostname(hostname);  // set hostname in local network
 
   WiFi.begin(ssid, password);
   logger->print("\nConnecting to ");
@@ -124,7 +126,7 @@ void setup() {
   logger->println();
   logger->print("connected, address ");
   logger->print(WiFi.localIP());
-  logger->print("   hostname ");
+  logger->print(", hostname ");
   logger->println(WiFi.hostname());
 
   // start server

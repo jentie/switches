@@ -35,6 +35,9 @@ RST |o |-----------| o| TX
 
 // WLAN network credentials
 #include "credentials.h"
+// const char* ssid = "...";
+// const char* password = "...";
+
 
 String newHostname = "WLANSW-1";
 
