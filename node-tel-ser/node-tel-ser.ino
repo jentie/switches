@@ -45,11 +45,13 @@
 
 #include "credentials.h"
 
+const char hostname[] = "SerBridge";
+
+
 #define BAUD_SERIAL 115200
 #define BAUD_LOGGER 115200
 #define RXBUFFERSIZE 1024
 
-////////////////////////////////////////////////////////////
 
 #include <SoftwareSerial.h>
 SoftwareSerial* logger = nullptr;
@@ -100,7 +102,7 @@ void setup() {
   logger->printf("serial receive buffer size: %d bytes\n", RXBUFFERSIZE);
 
   pinMode(D5, INPUT_PULLUP);
-//  loopback = digitalRead(D5);
+  //  loopback = digitalRead(D5);
 
   if (loopback) {
     USC0(0) |= (1 << UCLBE);  // incomplete HardwareSerial API
@@ -108,6 +110,10 @@ void setup() {
   }
 
   WiFi.mode(WIFI_STA);
+
+  WiFi.hostname(hostname);
+  logger->printf("hostname: %s\n", WiFi.hostname().c_str());
+
   WiFi.begin(ssid, password);
   logger->print("\nConnecting to ");
   logger->println(ssid);
@@ -116,14 +122,16 @@ void setup() {
     delay(500);
   }
   logger->println();
-  logger->print("connected, address=");
-  logger->println(WiFi.localIP());
+  logger->print("connected, address ");
+  logger->print(WiFi.localIP());
+  logger->print("   hostname ");
+  logger->println(WiFi.hostname());
 
   // start server
   server.begin();
   server.setNoDelay(true);
 
-  logger->print("Ready! Use 'telnet ");
+  logger->print("ready - use 'telnet ");
   logger->print(WiFi.localIP());
   logger->printf(" %d' to connect\n", port);
 }
