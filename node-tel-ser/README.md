@@ -1,9 +1,8 @@
-
-  node-tel-ser - telnet serial bridge
+# node-tel-ser - telnet serial bridge
   
-  board: NodeMCU 0.9 
+### board: NodeMCU 0.9 
 
-  notes:
+### notes
   * log info via USB serial interface @ 115200 
   * serial interface on TXD2 / D8 & RXD2 / D7
   * select internal loopback with D5 ( D5=hi --> loopback)
@@ -14,8 +13,10 @@
       D2=lo & D1=lo -->   9600
 
 
-  based on 8266 example:
-  WiFiTelnetToSerial - Example Transparent UART to Telnet Server for esp8266
+### based on 8266 example
+  
+## WiFiTelnetToSerial - Example Transparent UART to Telnet Server for esp8266
+  
   https://github.com/esp8266/Arduino/blob/master/libraries/ESP8266WiFi/examples/WiFiTelnetToSerial/WiFiTelnetToSerial.ino
 
   Copyright (c) 2015 Hristo Gochkov. All rights reserved.
