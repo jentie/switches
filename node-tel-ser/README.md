@@ -1,16 +1,18 @@
-# node-tel-ser - telnet serial bridge
+# node-tel-ser - telnet to serial bridge
+
+<img src="../images/node_tel_ser.jpg" width=600>
   
 ### board: NodeMCU 0.9 
 
 ### notes
-  * log info via USB serial interface @ 115200 
-  * serial interface on TXD2 / D8 & RXD2 / D7
-  * select internal loopback with D5 ( D5=hi --> loopback)
-  * select baud rate with D2 & D1
-      D2=hi & D1=hi --> 119200
-      D2=hi & D1=lo -->  57600
-      D2=lo & D1=ho -->  19200
-      D2=lo & D1=lo -->   9600
+* log info via USB serial interface @ 115200 
+* serial interface on TXD2 / D8 & RXD2 / D7
+* select internal loopback with D5 ( D5=hi --> loopback)
+* select baud rate with D2 & D1
+  * D2=hi & D1=hi --> 119200
+  * D2=hi & D1=lo -->  57600
+  * D2=lo & D1=ho -->  19200
+  * D2=lo & D1=lo -->   9600
 
 
 ### based on 8266 example
