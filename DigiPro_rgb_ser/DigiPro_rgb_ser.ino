@@ -1,37 +1,33 @@
 /*
-  nano-rgb-ser - RGB LED with serial interface
+  DigiPro-rgb-ser - RGB LED with serial interface
 
-  20240323, Jens
+  20240328, Jens
 
   control a RGB led via ASCII commands
   additional analog output and input
 
   notes:
   * led pins: D2, D3, D4
-  * analog pins Ain - A0/D14 & Aout D9
-  * serial interfaces: USB & Tx/D6 / Rx/D7
+  * analog pins Ain-A12 & Aout-D0
+  * only one serial interface (?), on Tx/Rx pins
 
-  notes on Nano clone programming:
-  * install / reinstall CH340 driver?
-  * select old bootloader?
+  notes on Digispark programming:
+  * insert USB after beginning of upload
 
 */
 
 
 // Ardunio Nano
-#include <SoftwareSerial.h>
-
-#define txPin 6
-#define rxPin 7
-
-SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
-
-#define A_IN A0
-#define A_OUT 9
+// #include <SoftwareSerial.h>
+// #define txPin 6
+// #define rxPin 7
+// SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
+// #define A_IN A0
+// #define A_OUT 0
 
 // ATtiny167
-// #define A_IN A12
-// #define A_OUT 4
+#define A_IN A12
+#define A_OUT 0 
 
 
 #define ON HIGH
@@ -86,9 +82,9 @@ void analogIn() {
   Serial.print(" - 0x");
   Serial.println(value, HEX);
 
-  Serial1.print(value);
-  Serial1.print(" - 0x");
-  Serial1.println(value, HEX);
+  // Serial1.print(value);
+  // Serial1.print(" - 0x");
+  // Serial1.println(value, HEX);
 }
 
 
@@ -102,9 +98,9 @@ void analogLoop() {
     Serial.print(" - 0x");
     Serial.println(value, HEX);
 
-    Serial1.print(value);
-    Serial1.print(" - 0x");
-    Serial1.println(value, HEX);
+    // Serial1.print(value);
+    // Serial1.print(" - 0x");
+    // Serial1.println(value, HEX);
 
     delay(1000);  // every second
 
@@ -114,11 +110,11 @@ void analogLoop() {
         break;
     }
 
-    if (Serial1.available()) {  // stop with "any key"
-      char c = Serial1.read();
-      if (c == 'q')
-        break;
-    }
+    // if (Serial1.available()) {  // stop with "any key"
+    //   char c = Serial1.read();
+    //   if (c == 'q')
+    //     break;
+    // }
   }  // while
 }
 
@@ -165,18 +161,18 @@ void setup() {
 
   analogWrite(A_OUT, 0);  // default: 0 V
 
-  pinMode(rxPin, INPUT);  // pins serial interface
-  pinMode(txPin, OUTPUT);
-  Serial1.begin(9600);
-
+  // pinMode(rxPin, INPUT);  // pins serial interface
+  // pinMode(txPin, OUTPUT);
+  
   Serial.begin(9600);
+  // Serial1.begin(9600);
 
   test(250);
 
   Serial.println(F(HELP_DSC));
   Serial.println("ok");
-  Serial1.println(F(HELP_DSC));
-  Serial1.println("ok");
+//   Serial1.println(F(HELP_DSC));
+//   Serial1.println("ok");
 }
 
 
@@ -202,26 +198,26 @@ void loop() {
     }
   }
 
-  // read from additional serial interface
-  if (Serial1.available()) {  // read from interface
+  // // read from additional serial interface
+  // if (Serial1.available()) {  // read from interface
 
-    char c = Serial1.read();
+  //   char c = Serial1.read();
 
-    if (echo)
-      Serial1.print(c);
+  //   if (echo)
+  //     Serial1.print(c);
 
-    if ((c == '\n') || (c == '\r')) {  // NL or CR
-      if (echo)
-        Serial1.println();
-      command[cptr] = 0;
-      processCommand();
-      cptr = 0;  // delete command line
-    } else {
-      command[cptr] = c;
-      cptr++;
-      cptr = cptr & 0x0F;
-    }
-  }
+  //   if ((c == '\n') || (c == '\r')) {  // NL or CR
+  //     if (echo)
+  //       Serial1.println();
+  //     command[cptr] = 0;
+  //     processCommand();
+  //     cptr = 0;  // delete command line
+  //   } else {
+  //     command[cptr] = c;
+  //     cptr++;
+  //     cptr = cptr & 0x0F;
+  //   }
+  // }
 
   // toogle LED in main loop
   if (millis() - previousMillis >= 1000) {  // every second
@@ -268,12 +264,12 @@ void processCommand() {
     Serial.println(debug);
     Serial.println(F(HELP_CMD));
 
-    Serial1.println(F(HELP_DSC));
-    Serial1.print("status: echo=");
-    Serial1.print(echo);
-    Serial1.print("   debug=");
-    Serial1.println(debug);
-    Serial1.println(F(HELP_CMD));
+    // Serial1.println(F(HELP_DSC));
+    // Serial1.print("status: echo=");
+    // Serial1.print(echo);
+    // Serial1.print("   debug=");
+    // Serial1.println(debug);
+    // Serial1.println(F(HELP_CMD));
     
   } else if (strcmp(command, "reset") == 0) {
     resetFunc();  //call reset
@@ -319,9 +315,9 @@ void processCommand() {
 
   if (err) {
     Serial.println("err");
-    Serial1.println("err");
+    // Serial1.println("err");
   } else {
     Serial.println("ok");
-    Serial1.println("ok");
+    // Serial1.println("ok");
   }
 }

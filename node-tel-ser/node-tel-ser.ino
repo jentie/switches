@@ -48,6 +48,8 @@
 // const char* ssid = "...";
 // const char* password = "...";
 
+unsigned long previousMillis;  // variable for comparing millis counter
+unsigned long statusToggle = 250;
 
 const char* hostname = "SerBridge";
 
@@ -75,6 +77,12 @@ WiFiClient serverClients[MAX_SRV_CLIENTS];
 
 void setup() {
 
+  // status led: fast - idle / slow - telnet active 
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, LOW);
+  previousMillis = millis();
+  statusToggle = 500;
+  
   pinMode(D1, INPUT_PULLUP);
   pinMode(D2, INPUT_PULLUP);
 
@@ -89,6 +97,8 @@ void setup() {
   else
     baud = 9600;
 
+baud = 9600;    // debug
+
   Serial.begin(baud);
   Serial.setRxBufferSize(RXBUFFERSIZE);
 
@@ -101,7 +111,7 @@ void setup() {
 
   logger->println("\n\n\nnode-tel-ser - telnet serial bridge");
   logger->println(ESP.getFullVersion());
-  logger->printf("serial baud rate: %d (8n1)\n", BAUD_SERIAL);
+  logger->printf("serial baud rate: %d (8n1)\n", baud);
   logger->printf("serial receive buffer size: %d bytes\n", RXBUFFERSIZE);
 
   pinMode(D5, INPUT_PULLUP);
@@ -140,6 +150,11 @@ void setup() {
 
 
 void loop() {
+
+  // // no client: idle
+  // if (!server.hasClient())
+  //   statusToggle = 500;
+
   // check if there are any new clients
   if (server.hasClient()) {
     // find free/disconnected spot
@@ -149,6 +164,7 @@ void loop() {
         serverClients[i] = server.accept();
         logger->print("new client: index ");
         logger->println(i);
+        statusToggle = 1000;
         break;
       }
 
@@ -161,7 +177,8 @@ void loop() {
       // - stop() - automatically too
       logger->printf("server is busy with %d active connections\n", MAX_SRV_CLIENTS);
     }
-  }
+  } else
+
 
   // check TCP clients for data
   for (int i = 0; i < MAX_SRV_CLIENTS; i++)
@@ -203,5 +220,11 @@ void loop() {
         size_t tcp_sent = serverClients[i].write(sbuf, serial_got);
         if (tcp_sent != len) { logger->printf("len mismatch: available:%zd serial-read:%zd tcp-write:%zd\n", len, serial_got, tcp_sent); }
       }
+  }
+
+  // toogle LED in main loop
+  if (millis() - previousMillis >= statusToggle) {  // every second
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    previousMillis = millis();
   }
 }

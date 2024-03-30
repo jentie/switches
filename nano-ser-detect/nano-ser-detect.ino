@@ -27,7 +27,7 @@
      
 
   notes on Nano clone programming:
-  * install CH340 driver?
+  * install / reinstall CH340 driver?
   * select old bootloader?
 
 */
@@ -97,7 +97,7 @@ long detectRate(int input) {
     if ((sig > 0) && (sig < rate))
       rate = sig;
 
-    delay(random(2, 10));  // different characters, no pattern
+    delay(random(0, 5));  // different characters, no pattern
   }
 
   if (debug) {
@@ -146,8 +146,8 @@ int baud2num(long baud) {
     case 4800: return 48;
     case 2400: return 24;
     case 1200: return 12;
-    case 600: return 60;
-    case 300: return 30;
+    case 600: return 6;
+    case 300: return 3;
     default: return 88;
   }
 }
@@ -180,5 +180,5 @@ void loop() {
 
   digitalWrite(LED_BUILTIN, LOW);  // show display
 
-  delay(3000);
+  delay(2000);
 }
