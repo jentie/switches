@@ -17,10 +17,11 @@
 */
 
 
+#define txPin 7
+#define rxPin 6
+
 // Ardunio Nano
 // #include <SoftwareSerial.h>
-// #define txPin 6
-// #define rxPin 7
 // SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
 // #define A_IN A0
 // #define A_OUT 0
@@ -40,7 +41,7 @@
 unsigned long previousMillis;  // variable for comparing millis counter
 
 char command[16];  // command line
-byte cptr = 0;
+byte cmdptr = 0;
 
 bool echo = false;
 bool debug = false;   // note: debug messages only via USB
@@ -104,15 +105,15 @@ void analogLoop() {
 
     delay(1000);  // every second
 
-    if (Serial.available()) {  // stop with "any key"
+    if (Serial.available()) {  // stop with 'q' or '^C'
       char c = Serial.read();
-      if (c == 'q')
+      if  ((c == 'q' || c == 0x03))
         break;
     }
 
-    // if (Serial1.available()) {  // stop with "any key"
+    // if (Serial1.available()) {  // stop with 'q' or '^C'
     //   char c = Serial1.read();
-    //   if (c == 'q')
+    //   if  ((c == 'q' || c == 0x03))
     //     break;
     // }
   }  // while
@@ -161,13 +162,13 @@ void setup() {
 
   analogWrite(A_OUT, 0);  // default: 0 V
 
-  // pinMode(rxPin, INPUT);  // pins serial interface
-  // pinMode(txPin, OUTPUT);
+  pinMode(rxPin, INPUT);  // pins serial interface
+  pinMode(txPin, OUTPUT);
   
   Serial.begin(9600);
   // Serial1.begin(9600);
 
-  test(250);
+  test(2000);
 
   Serial.println(F(HELP_DSC));
   Serial.println("ok");
@@ -188,13 +189,13 @@ void loop() {
     if ((c == '\n') || (c == '\r')) {  // NL or CR
       if (echo)
         Serial.println();
-      command[cptr] = 0;
+      command[cmdptr] = 0;
       processCommand();
-      cptr = 0;  // delete command line
+      cmdptr = 0;  // start new command line
     } else {
-      command[cptr] = c;
-      cptr++;
-      cptr = cptr & 0x0F;
+      command[cmdptr] = c;
+      cmdptr++;
+      cmdptr = cmdptr & 0x0F;
     }
   }
 
@@ -209,13 +210,13 @@ void loop() {
   //   if ((c == '\n') || (c == '\r')) {  // NL or CR
   //     if (echo)
   //       Serial1.println();
-  //     command[cptr] = 0;
+  //     command[cmdptr] = 0;
   //     processCommand();
-  //     cptr = 0;  // delete command line
+  //     cmdptr = 0;  // start new command line
   //   } else {
-  //     command[cptr] = c;
-  //     cptr++;
-  //     cptr = cptr & 0x0F;
+  //     command[cmdptr] = c;
+  //     cmdptr++;
+  //     cmdptr = cmdptr & 0x0F;
   //   }
   // }
 
@@ -234,7 +235,7 @@ void processCommand() {
 
   for (int i = 0; command[i] != '\0'; ++i) {
     if (command[i] >= 'A' && command[i] <= 'Z') {  // to lower case
-      command[i] = command[i] - 'A' + 'a';
+      command[i] = command[i] + 'a' - 'A';
     }
   }
 

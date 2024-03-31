@@ -77,12 +77,12 @@ WiFiClient serverClients[MAX_SRV_CLIENTS];
 
 void setup() {
 
-  // status led: fast - idle / slow - telnet active 
+  // status led: fast - idle / slow - telnet active
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
   previousMillis = millis();
-  statusToggle = 500;
-  
+  statusToggle = 250;
+
   pinMode(D1, INPUT_PULLUP);
   pinMode(D2, INPUT_PULLUP);
 
@@ -97,7 +97,7 @@ void setup() {
   else
     baud = 9600;
 
-baud = 9600;    // debug
+  baud = 9600;  ///////// debug
 
   Serial.begin(baud);
   Serial.setRxBufferSize(RXBUFFERSIZE);
@@ -180,12 +180,15 @@ void loop() {
   } else
 
 
-  // check TCP clients for data
-  for (int i = 0; i < MAX_SRV_CLIENTS; i++)
-    while (serverClients[i].available() && Serial.availableForWrite() > 0) {
-      // working char by char is not very efficient
-      Serial.write(serverClients[i].read());
-    }
+    // check TCP clients for data
+    for (int i = 0; i < MAX_SRV_CLIENTS; i++)
+      while (serverClients[i].available() && Serial.availableForWrite() > 0) {
+        // working char by char is not very efficient
+        char c = serverClients[i].read();
+        Serial.write(c);
+        // logger->print(' ');
+        // logger->print(c, HEX);
+      }
 
   // determine maximum output size "fair TCP use"
   // client.availableForWrite() returns 0 when !client.connected()

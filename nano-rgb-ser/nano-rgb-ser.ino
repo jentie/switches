@@ -18,20 +18,19 @@
 */
 
 
+#define txPin 7
+#define rxPin 6
+
 // Ardunio Nano
 #include <SoftwareSerial.h>
-
-#define txPin 6
-#define rxPin 7
-
 SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
-
 #define A_IN A0
 #define A_OUT 9
 
 // ATtiny167
 // #define A_IN A12
 // #define A_OUT 4
+
 
 
 #define ON HIGH
@@ -44,10 +43,10 @@ SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
 unsigned long previousMillis;  // variable for comparing millis counter
 
 char command[16];  // command line
-byte cptr = 0;
+byte cmdptr = 0;
 
-bool echo = false;
-bool debug = false;   // note: debug messages only via USB
+bool echo = true;
+bool debug = true;  // note: debug messages only via USB
 
 
 #define HELP_DSC "\nnano-rgb-ser - RGB LED with serial interface\nversion 20240323"
@@ -108,15 +107,15 @@ void analogLoop() {
 
     delay(1000);  // every second
 
-    if (Serial.available()) {  // stop with "any key"
+    if (Serial.available()) {  // stop with 'q' or '^C'
       char c = Serial.read();
-      if (c == 'q')
+      if ((c == 'q' || c == 0x03))
         break;
     }
 
-    if (Serial1.available()) {  // stop with "any key"
+    if (Serial1.available()) {  // stop with 'q' or '^C'
       char c = Serial1.read();
-      if (c == 'q')
+      if ((c == 'q' || c == 0x03))
         break;
     }
   }  // while
@@ -165,13 +164,19 @@ void setup() {
 
   analogWrite(A_OUT, 0);  // default: 0 V
 
+  Serial.begin(9600);
+
   pinMode(rxPin, INPUT);  // pins serial interface
   pinMode(txPin, OUTPUT);
   Serial1.begin(9600);
 
-  Serial.begin(9600);
+  test(2000);  // visible start, also wait for soft serial
 
-  test(250);
+  while (Serial.available())  // empty queues
+    char c = Serial.read();
+  while (Serial1.available())
+    char c = Serial1.read();
+  cmdptr = 0;
 
   Serial.println(F(HELP_DSC));
   Serial.println("ok");
@@ -190,15 +195,13 @@ void loop() {
       Serial.print(c);
 
     if ((c == '\n') || (c == '\r')) {  // NL or CR
-      if (echo)
-        Serial.println();
-      command[cptr] = 0;
+      command[cmdptr] = 0;
       processCommand();
-      cptr = 0;  // delete command line
+      cmdptr = 0;  // start new command line
     } else {
-      command[cptr] = c;
-      cptr++;
-      cptr = cptr & 0x0F;
+      command[cmdptr] = c;
+      cmdptr++;
+      cmdptr = cmdptr & 0x0F;
     }
   }
 
@@ -206,20 +209,17 @@ void loop() {
   if (Serial1.available()) {  // read from interface
 
     char c = Serial1.read();
-
     if (echo)
       Serial1.print(c);
 
     if ((c == '\n') || (c == '\r')) {  // NL or CR
-      if (echo)
-        Serial1.println();
-      command[cptr] = 0;
+      command[cmdptr] = 0;
       processCommand();
-      cptr = 0;  // delete command line
+      cmdptr = 0;  // start new command line
     } else {
-      command[cptr] = c;
-      cptr++;
-      cptr = cptr & 0x0F;
+      command[cmdptr] = c;
+      cmdptr++;
+      cmdptr = cmdptr & 0x0F;
     }
   }
 
@@ -233,16 +233,18 @@ void loop() {
 
 void processCommand() {
 
-  if (command[0] == 0)  // empty, from CR or NL
+  if (command[0] == 0) {  // empty, from CR or NL
     return;
+  }
 
   for (int i = 0; command[i] != '\0'; ++i) {
     if (command[i] >= 'A' && command[i] <= 'Z') {  // to lower case
-      command[i] = command[i] - 'A' + 'a';
+      command[i] = command[i] + 'a' - 'A';
     }
   }
 
   if (debug) {
+    Serial.print(" cmd:");
     Serial.println(command);
     for (int i = 0; i < 16; i++) {  // debug: show command line
       Serial.print(command[i], HEX);
@@ -274,7 +276,7 @@ void processCommand() {
     Serial1.print("   debug=");
     Serial1.println(debug);
     Serial1.println(F(HELP_CMD));
-    
+
   } else if (strcmp(command, "reset") == 0) {
     resetFunc();  //call reset
   } else if (strcmp(command, "red") == 0) {
