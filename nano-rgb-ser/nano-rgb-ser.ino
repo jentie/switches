@@ -42,16 +42,19 @@ SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
 
 unsigned long previousMillis;  // variable for comparing millis counter
 
-char command[16];  // command line
-byte cmdptr = 0;
+char cmdUSB[16];  // command line from USB
+byte cmdUSBPtr = 0;
 
-bool echo = true;
-bool debug = true;  // note: debug messages only via USB
+char cmdSer[16];  // command line from serial interface
+byte cmdSerPtr = 0;
+
+bool echo = false;
+bool debug = false;  // note: debug messages only via USB
 
 
 #define HELP_DSC "\nnano-rgb-ser - RGB LED with serial interface\nversion 20240323"
 #define HELP_CMD "\
-commands: test, echo, debug, info, reset\n\
+commands: test, echo, debug, info, reset, ok, err\n\
 colors: red, green, blue, yellow, magenta, cyan, white, black\n\
 analog: out <num> (0...1023), in, loop (stop with 'q')"
 
@@ -122,7 +125,7 @@ void analogLoop() {
 }
 
 
-void analogOut() {
+void analogOut(char command[]) {
   int value = 0;
 
   String number = command + 4;
@@ -176,7 +179,8 @@ void setup() {
     char c = Serial.read();
   while (Serial1.available())
     char c = Serial1.read();
-  cmdptr = 0;
+  cmdUSBPtr = 0;
+  cmdSerPtr = 0;
 
   Serial.println(F(HELP_DSC));
   Serial.println("ok");
@@ -191,17 +195,17 @@ void loop() {
   if (Serial.available()) {  // read from interface
 
     char c = Serial.read();
-    if (echo)
-      Serial.print(c);
+    // if (echo)
+    //   Serial.print(c);
 
     if ((c == '\n') || (c == '\r')) {  // NL or CR
-      command[cmdptr] = 0;
-      processCommand();
-      cmdptr = 0;  // start new command line
+      cmdUSB[cmdUSBPtr] = 0;
+      processCommand(cmdUSB);
+      cmdUSBPtr = 0;  // start new command line
     } else {
-      command[cmdptr] = c;
-      cmdptr++;
-      cmdptr = cmdptr & 0x0F;
+      cmdUSB[cmdUSBPtr] = c;
+      cmdUSBPtr++;
+      cmdUSBPtr = cmdUSBPtr & 0x0F;
     }
   }
 
@@ -209,17 +213,20 @@ void loop() {
   if (Serial1.available()) {  // read from interface
 
     char c = Serial1.read();
-    if (echo)
-      Serial1.print(c);
+    if (echo) {
+      Serial.print(cmdSerPtr);
+      Serial.print(c);
+      Serial.print(" ");
+    }
 
     if ((c == '\n') || (c == '\r')) {  // NL or CR
-      command[cmdptr] = 0;
-      processCommand();
-      cmdptr = 0;  // start new command line
+      cmdSer[cmdSerPtr] = 0;
+      processCommand(cmdSer);
+      cmdSerPtr = 0;  // start new command line
     } else {
-      command[cmdptr] = c;
-      cmdptr++;
-      cmdptr = cmdptr & 0x0F;
+      cmdSer[cmdSerPtr] = c;
+      cmdSerPtr++;
+      cmdSerPtr = cmdSerPtr & 0x0F;
     }
   }
 
@@ -231,7 +238,7 @@ void loop() {
 }
 
 
-void processCommand() {
+void processCommand(char command[]) {
 
   if (command[0] == 0) {  // empty, from CR or NL
     return;
@@ -244,11 +251,11 @@ void processCommand() {
   }
 
   if (debug) {
-    Serial.print(" cmd:");
-    Serial.println(command);
+    Serial.print("cmd:");
+    Serial.print(command);
     for (int i = 0; i < 16; i++) {  // debug: show command line
-      Serial.print(command[i], HEX);
       Serial.print(" ");
+      Serial.print(command[i], HEX);
     }
     Serial.println();
   }
@@ -278,7 +285,12 @@ void processCommand() {
     Serial1.println(F(HELP_CMD));
 
   } else if (strcmp(command, "reset") == 0) {
-    resetFunc();  //call reset
+    resetFunc();                            //call reset
+  } else if (strcmp(command, "ok") == 0) {  // nothing, just reply "ok"
+    err = false;
+  } else if (strcmp(command, "err") == 0) {  // nothing, just error code
+    err = true;
+
   } else if (strcmp(command, "red") == 0) {
     digitalWrite(LED_R, ON);
     digitalWrite(LED_G, OFF);
@@ -312,7 +324,7 @@ void processCommand() {
     digitalWrite(LED_G, OFF);
     digitalWrite(LED_B, OFF);
   } else if (strncmp(command, "out ", 4) == 0) {
-    analogOut();
+    analogOut(command);
   } else if (strcmp(command, "in") == 0) {
     analogIn();
   } else if (strcmp(command, "loop") == 0) {
