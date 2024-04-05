@@ -9,7 +9,7 @@
   notes:
   * led pins: D2, D3, D4
   * analog pins Ain - A0/D14 & Aout D9
-  * serial interfaces: USB & Tx/D6 / Rx/D7
+  * serial interfaces: USB & Tx/D7 / Rx/D6
 
   notes on Nano clone programming:
   * install / reinstall CH340 driver?

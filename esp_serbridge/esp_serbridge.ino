@@ -1,12 +1,11 @@
 /*
   esp-serbridge - telnet to serial bridge
 
-  20240401, Jens
+  20240405, Jens
 
 
   todo:
   * kind of loopback/echo from external serial receiver to transmitter
-
 
   based on TelnetServerExample from Lennart Hennigs ESPTelnet
   https://github.com/LennartHennigs/ESPTelnet/blob/main/examples/TelnetServerExample/TelnetServerExample.ino
@@ -19,61 +18,62 @@
 // const char* ssid = "...";
 // const char* password = "...";
 
-
 #define MAX_SRV_CLIENTS 1  // number of telnet clients
-
-const char* hostname = "SerBridge";
 
 #define LOGGER_SPEED 9600
 #define SERIAL_SPEED 9600
 
+const char* hostname = "SerBridge";
+
+
 ESPTelnet telnet;
 IPAddress ip;
 uint16_t port = 23;
+
+bool debug = true;
 
 
 unsigned long previousMillis;  // variable for comparing millis counter
 unsigned long statusToggle = 250;
 
 
-/* ------------------------------------------------- */
-
-bool isConnected() {
-  return (WiFi.status() == WL_CONNECTED);
-}
+// bool isConnected() {
+//   return (WiFi.status() == WL_CONNECTED);
+// }
 
 
-bool connectToWiFi(int max_tries = 20, int pause = 500) {
+bool connectToWiFi(int max_tries = 20) {
   int i = 0;
+
   WiFi.mode(WIFI_STA);
   WiFi.disconnect();
   delay(100);
 
-  WiFi.hostname(hostname);  // set hostname in local network
+  WiFi.setHostname(hostname);  // set hostname in local network
+  WiFi.hostname(hostname);     // set hostname in local network
 
   WiFi.begin(ssid, password);
   do {
-    delay(pause);
+    delay(500);
     Serial.print(".");
     i++;
-  } while (!isConnected() && i < max_tries);
+  } while ((WiFi.status() != WL_CONNECTED) && (i < max_tries));
   WiFi.setAutoReconnect(true);
   WiFi.persistent(true);
-  return isConnected();
+  return (WiFi.status() == WL_CONNECTED);
 }
 
 
 void errorMsg(String error, bool restart = true) {
   Serial.println(error);
   if (restart) {
-    Serial.println("Rebooting now...");
+    Serial.println("rebooting now...");
     delay(2000);
     ESP.restart();
     delay(2000);
   }
 }
 
-/* ------------------------------------------------- */
 
 void setupTelnet() {
   // passing on functions for various telnet events
@@ -83,55 +83,67 @@ void setupTelnet() {
   telnet.onDisconnect(onTelnetDisconnect);
   telnet.onInputReceived(onTelnetInput);
 
-  Serial.print("- Telnet: ");
+  Serial.print("telnet: ");
   if (telnet.begin(port)) {
     Serial.println("running");
   } else {
     Serial.println("error.");
-    errorMsg("Will reboot...");
+    errorMsg("will reboot...");
   }
 }
 
-/* ------------------------------------------------- */
 
+//
 // (optional) callback functions for telnet events
+//
+
 void onTelnetConnect(String ip) {
-  Serial.print("- Telnet: ");
+  Serial.print("telnet: ");
   Serial.print(ip);
   Serial.println(" connected");
 
   telnet.println("\nWelcome " + telnet.getIP());
   telnet.println("(Use ^] + q  to disconnect.)");
 
-  Serial2.println("info");
+  statusToggle = 1000;
 }
+
 
 void onTelnetDisconnect(String ip) {
-  Serial.print("- Telnet: ");
+  Serial.print("telnet: ");
   Serial.print(ip);
   Serial.println(" disconnected");
+
+  statusToggle = 250;
 }
+
 
 void onTelnetReconnect(String ip) {
-  Serial.print("- Telnet: ");
+  Serial.print("telnet: ");
   Serial.print(ip);
   Serial.println(" reconnected");
+
+  statusToggle = 1000;
 }
 
+
 void onTelnetConnectionAttempt(String ip) {
-  Serial.print("- Telnet: ");
+  Serial.print("telnet: ");
   Serial.print(ip);
-  Serial.println(" tried to connected");
+  Serial.println(" tried to connect");
 }
+
 
 void onTelnetInput(String str) {
 
-  Serial.print("-->");
-  for (int i = 0; i < str.length(); i++)
-    Serial.print(str.charAt(i), HEX);
-  Serial.print("-->");
-  Serial.print(str);
-  Serial.println("-->");
+  if (debug) {
+    Serial.print("-->");
+    for (int i = 0; i < str.length(); i++)
+      Serial.print(str.charAt(i), HEX);
+    Serial.print("-->");
+    Serial.print(str);
+    Serial.println("-->");
+  }
 
   Serial2.println(str);
 }
@@ -146,17 +158,21 @@ void setup() {
   statusToggle = 250;
 
   Serial.begin(LOGGER_SPEED);
-  Serial.println("\n\n\esp-serbridge - telnet to serial bridge");
+  Serial.println("   ");
+  Serial.println("\nesp-serbridge - telnet to serial bridge");
   Serial.println(ESP.getSdkVersion());
 
   Serial.print("wifi ");
   connectToWiFi();
 
-  if (isConnected()) {
+  if (WiFi.status() == WL_CONNECTED) {
     ip = WiFi.localIP();
     Serial.println();
-    Serial.print("telnet ");
+    Serial.print("telnet server ");
     Serial.print(ip);
+    Serial.print(" / ");
+    Serial.print(WiFi.getHostname());
+    Serial.println();
     setupTelnet();
   } else {
     Serial.println();
@@ -183,13 +199,23 @@ void loop() {
     if ((c == '\n') || (c == '\r')) {  // NL or CR
       line[lineptr] = 0;
       telnet.println(line);
-      Serial.print(">");
-      Serial.print(line);
-      Serial.println("<");
+
+      if (debug) {
+        Serial.print(">");
+        Serial.print(line);
+        Serial.println("<");
+      }
+
       lineptr = 0;  // start new command line
     } else {
       line[lineptr] = c;
       lineptr++;
     }
+  }
+
+  // toogle LED in main loop
+  if (millis() - previousMillis >= statusToggle) {  // every second
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    previousMillis = millis();
   }
 }
