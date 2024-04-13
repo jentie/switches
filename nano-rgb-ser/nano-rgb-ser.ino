@@ -15,6 +15,10 @@
   * install / reinstall CH340 driver?
   * select old bootloader?
 
+
+  TODO:
+  * check EOL
+
 */
 
 
@@ -36,9 +40,9 @@ SoftwareSerial Serial1 = SoftwareSerial(rxPin, txPin);  // add. serial i/f
 #define ON HIGH
 #define OFF LOW
 
-#define LED_R 2
+#define LED_R 4
 #define LED_G 3
-#define LED_B 4
+#define LED_B 2
 
 unsigned long previousMillis;  // variable for comparing millis counter
 
@@ -50,11 +54,14 @@ byte cmdSerPtr = 0;
 
 bool echo = false;
 bool debug = false;  // note: debug messages only via USB
+bool eolNL = true;
+bool eolCR = true;
 
+char EOL[] = "\r\n\0";
 
 #define HELP_DSC "\nnano-rgb-ser - RGB LED with serial interface\nversion 20240323"
 #define HELP_CMD "\
-commands: test, echo, debug, info, reset, ok, err\n\
+commands: test, echo, debug, info, reset, nl, cr, ok, err\n\
 colors: red, green, blue, yellow, magenta, cyan, white, black\n\
 analog: out <num> (0...1023), in, loop (stop with 'q')"
 
@@ -86,11 +93,13 @@ void analogIn() {
 
   Serial.print(value);
   Serial.print(" - 0x");
-  Serial.println(value, HEX);
+  Serial.print(value, HEX);
+  Serial.print(EOL);
 
   Serial1.print(value);
   Serial1.print(" - 0x");
-  Serial1.println(value, HEX);
+  Serial1.print(value, HEX);
+  Serial1.print(EOL);
 }
 
 
@@ -102,11 +111,13 @@ void analogLoop() {
 
     Serial.print(value);
     Serial.print(" - 0x");
-    Serial.println(value, HEX);
+    Serial.print(value, HEX);
+    Serial.print(EOL);
 
     Serial1.print(value);
     Serial1.print(" - 0x");
-    Serial1.println(value, HEX);
+    Serial1.print(value, HEX);
+    Serial1.print(EOL);
 
     delay(1000);  // every second
 
@@ -140,7 +151,8 @@ void analogOut(char command[]) {
 
   if (debug) {
     Serial.print("' - ");
-    Serial.println(value);
+    Serial.print(value);
+    Serial.print(EOL);
   }
 
   if (value < 0)
@@ -148,6 +160,20 @@ void analogOut(char command[]) {
   else if (value > 1023)
     value = 1023;
   analogWrite(A_OUT, value);
+}
+
+
+void setEOL() {
+
+  if (eolCR)
+    if (eolNL)
+      memcpy(EOL, "\r\n\0", 3);
+    else
+      memcpy(EOL, "\r\0\0", 3);
+  else if (eolNL)
+    memcpy(EOL, "\n\0\0", 3);
+  else
+    memcpy(EOL, "\0\0\0", 3);
 }
 
 
@@ -182,10 +208,18 @@ void setup() {
   cmdUSBPtr = 0;
   cmdSerPtr = 0;
 
-  Serial.println(F(HELP_DSC));
-  Serial.println("ok");
-  Serial1.println(F(HELP_DSC));
-  Serial1.println("ok");
+  setEOL();
+
+  Serial.print(F(HELP_DSC));
+  Serial.print(EOL);
+  Serial.print("ok");
+  Serial.print(F(HELP_DSC));
+  Serial.print(EOL);
+
+  Serial1.print(F(HELP_DSC));
+  Serial1.print(EOL);
+  Serial1.print("ok");
+  Serial1.print(EOL);
 }
 
 
@@ -257,7 +291,7 @@ void processCommand(char command[]) {
       Serial.print(" ");
       Serial.print(command[i], HEX);
     }
-    Serial.println();
+    Serial.print(EOL);
   }
 
   bool err = false;
@@ -268,21 +302,41 @@ void processCommand(char command[]) {
     echo = !echo;
   } else if (strcmp(command, "debug") == 0) {
     debug = !debug;
+  } else if (strcmp(command, "nl") == 0) {
+    eolNL = !eolNL;
+    setEOL();
+  } else if (strcmp(command, "cr") == 0) {
+    eolCR = !eolCR;
+    setEOL();
   } else if ((strcmp(command, "info") == 0) || (command[0] == '?')) {
 
-    Serial.println(F(HELP_DSC));
+    Serial.print(F(HELP_DSC));
+    Serial.print(EOL);
     Serial.print("status: echo=");
     Serial.print(echo);
     Serial.print("   debug=");
-    Serial.println(debug);
-    Serial.println(F(HELP_CMD));
+    Serial.print(debug);
+    Serial.print("   CR=");
+    Serial.print(eolCR);
+    Serial.print("   NL=");
+    Serial.print(eolNL);
+    Serial.print(EOL);
+    Serial.print(F(HELP_CMD));
+    Serial.print(EOL);
 
-    Serial1.println(F(HELP_DSC));
+    Serial1.print(F(HELP_DSC));
+    Serial1.print(EOL);
     Serial1.print("status: echo=");
     Serial1.print(echo);
     Serial1.print("   debug=");
-    Serial1.println(debug);
-    Serial1.println(F(HELP_CMD));
+    Serial1.print(debug);
+    Serial1.print("   CR=");
+    Serial1.print(eolCR);
+    Serial1.print("   NL=");
+    Serial1.print(eolNL);
+    Serial1.print(EOL);
+    Serial1.print(F(HELP_CMD));
+    Serial1.print(EOL);
 
   } else if (strcmp(command, "reset") == 0) {
     resetFunc();                            //call reset
@@ -332,10 +386,14 @@ void processCommand(char command[]) {
   } else err = true;
 
   if (err) {
-    Serial.println("err");
-    Serial1.println("err");
+    Serial.print("err");
+    Serial.print(EOL);
+    Serial1.print("err");
+    Serial1.print(EOL);
   } else {
-    Serial.println("ok");
-    Serial1.println("ok");
+    Serial.print("ok");
+    Serial.print(EOL);
+    Serial1.print("ok");
+    Serial1.print(EOL);
   }
 }

@@ -37,11 +37,6 @@ unsigned long previousMillis;  // variable for comparing millis counter
 unsigned long statusToggle = 250;
 
 
-// bool isConnected() {
-//   return (WiFi.status() == WL_CONNECTED);
-// }
-
-
 bool connectToWiFi(int max_tries = 20) {
   int i = 0;
 
